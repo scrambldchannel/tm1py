@@ -1,6 +1,6 @@
 import configparser
 import json
-import os
+from pathlib import Path
 import unittest
 import uuid
 
@@ -17,7 +17,7 @@ from TM1py.Utils.MDXUtils import DimensionSelection, read_dimension_composition_
 from TM1py.Utils.Utils import dimension_hierarchy_element_tuple_from_unique_name
 
 config = configparser.ConfigParser()
-config.read(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'config.ini'))
+config.read(Path(__file__).parent.joinpath('config.ini'))
 
 PREFIX = "TM1py_Tests_Utils_"
 
@@ -649,7 +649,7 @@ class TestMDXUtils(unittest.TestCase):
             ["[Dimension1].[Dimension1].[Element 790]", "[Dimension2].[Dimension2].[Element 541]"])
 
     def test_extract_axes_from_cellset(self):
-        with open(os.path.join("resources", "raw_cellset.json")) as file:
+        with open(Path(__file__).parent.joinpath("resources", "raw_cellset.json")) as file:
             raw_cellset_as_dict = json.load(file)
             row_axis, column_axis, title_axis = Utils.extract_axes_from_cellset(raw_cellset_as_dict=raw_cellset_as_dict)
             self.assertIn("[City].[City].[NYC]", json.dumps(row_axis))
@@ -660,10 +660,35 @@ class TestMDXUtils(unittest.TestCase):
 
     def test_odata_escape_single_quotes_in_object_names(self):
         url = "https://localhost:8099/api/v1/Dimensions('dime'nsion')/Hierarchies('hier'archy')/Elements('elem'ent')"
+        url1 = "https://localhost:915/api/v1/TransactionLogEntries?$orderby=TimeStamp desc &$filter=Cube eq 'Test 'Case' cube*'"
+        url2 = "https://localhost:915/api/v1/TransactionLogEntries?$orderby=TimeStamp desc &$filter=Cube eq 'Test C_'ase cube'"
+        url3 = "https://localhost:915/api/v1/TransactionLogEntries?$orderby=TimeStamp desc &$filter=Cube eq 'Test C9'as*'&e cube'"
+        url4 = "https://localhost:915/api/v1/TransactionLogEntries?$orderby=TimeStamp desc &$filter=Cube eq 'Test C9'_ase cube'"
+        url5 = "https://localhost:915/api/v1/TransactionLogEntries?$orderby=TimeStamp desc &$filter=Cube eq 'Test Case cube'"
         escaped_url = Utils.odata_escape_single_quotes_in_object_names(url)
+        escaped_url1 = Utils.odata_escape_single_quotes_in_object_names(url1)
+        escaped_url2 = Utils.odata_escape_single_quotes_in_object_names(url2)
+        escaped_url3 = Utils.odata_escape_single_quotes_in_object_names(url3)
+        escaped_url4 = Utils.odata_escape_single_quotes_in_object_names(url4)
+        escaped_url5 = Utils.odata_escape_single_quotes_in_object_names(url5)
         self.assertEqual(
             escaped_url,
             "https://localhost:8099/api/v1/Dimensions('dime''nsion')/Hierarchies('hier''archy')/Elements('elem''ent')")
+        self.assertEqual(
+            escaped_url1,
+            "https://localhost:915/api/v1/TransactionLogEntries?$orderby=TimeStamp desc &$filter=Cube eq 'Test ''Case'' cube*'")
+        self.assertEqual(
+            escaped_url2,
+            "https://localhost:915/api/v1/TransactionLogEntries?$orderby=TimeStamp desc &$filter=Cube eq 'Test C_''ase cube'")
+        self.assertEqual(
+            escaped_url3,
+            "https://localhost:915/api/v1/TransactionLogEntries?$orderby=TimeStamp desc &$filter=Cube eq 'Test C9''as*''&e cube'")
+        self.assertEqual(
+            escaped_url4,
+            "https://localhost:915/api/v1/TransactionLogEntries?$orderby=TimeStamp desc &$filter=Cube eq 'Test C9''_ase cube'")
+        self.assertEqual(
+            escaped_url5,
+            "https://localhost:915/api/v1/TransactionLogEntries?$orderby=TimeStamp desc &$filter=Cube eq 'Test Case cube'")
 
     def test_odata_escape_single_quotes_in_object_names_group(self):
         url = "https://localhost:8099/api/v1/Groups('Gro'up')"
@@ -773,7 +798,7 @@ class TestTIObfuscatorMethods(unittest.TestCase):
         # create bedrocks if they doesn't exist
         for bedrock in ("Bedrock.Dim.Clone", "Bedrock.Cube.Clone"):
             if not cls.tm1.processes.exists(bedrock):
-                with open(os.path.join("resources", bedrock + ".json"), "r") as file:
+                with open(Path(__file__).parent.joinpath("resources", bedrock + ".json"), "r") as file:
                     process = Process.from_json(file.read())
                     cls.tm1.processes.create(process)
 
